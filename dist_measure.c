@@ -66,9 +66,9 @@ uint16_t HCCalculateTime() {
  * Calculate the distance to object
  * @return distance in cm
  */
-uint8_t HCCalculateDistance() {
+uint16_t HCCalculateDistance() {
     uint16_t time = HCCalculateTime();
-    uint8_t distance = time / 58.82;
+    uint16_t distance = time / 58.77;
     return distance;
 }
 

@@ -56,7 +56,7 @@ void init() {
     LCDInit(LCD_MODE_4_BIT);
 }
 
-void display_distance(uint8_t distance) {
+void display_distance(uint16_t distance) {
     unsigned char buf[16];
     uint8_t show_cm = 1;
     
@@ -101,7 +101,7 @@ void main(void) {
     init();
     
     uint16_t current_delay = DELAY_IDLE;
-    uint8_t distance = 0;
+    uint16_t distance = 0;
     
     __delay_ms(current_delay);
     
@@ -113,7 +113,7 @@ void main(void) {
         update_proximity_meter(distance);
         // Print it on LCD display
         display_distance(distance);
-        
+                
         if (distance >= METER_LEVEL_1) {
             __delay_ms(DELAY_IDLE);
         } else {

@@ -31,7 +31,7 @@ uint16_t HCCalculateTime();
  * Calculate the distance to object
  * @return distance in cm
  */
-uint8_t HCCalculateDistance();
+uint16_t HCCalculateDistance();
 
 #endif	/* DIST_MEASURE_H */
 
