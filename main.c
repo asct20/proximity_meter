@@ -35,10 +35,10 @@
 #define DELAY_ACTIVE    750     // When an object is close
 
 // Proximity levels (higher level = object is closer)
-#define METER_LEVEL_1   60
-#define METER_LEVEL_2   40
-#define METER_LEVEL_3   25
-#define METER_LEVEL_4   15
+#define METER_LEVEL_1   70
+#define METER_LEVEL_2   65
+#define METER_LEVEL_3   55
+#define METER_LEVEL_4   40
 
 void init() {
     // Oscillator config
@@ -77,7 +77,7 @@ void display_distance(uint16_t distance) {
     }
 }
 
-void update_proximity_meter(uint8_t distance) {
+void update_proximity_meter(uint16_t distance) {
     PORTBbits.RB3 = 0;
     PORTBbits.RB2 = 0;
     PORTBbits.RB1 = 0;
