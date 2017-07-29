@@ -25,7 +25,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "LCD.h"
 #include "dist_measure.h"
 
 #define _XTAL_FREQ  8000000     // System clock frequency
@@ -53,28 +52,6 @@ void init() {
     TRISB   = 0x00;
 
     HCInit();
-    LCDInit(LCD_MODE_4_BIT);
-}
-
-void display_distance(uint16_t distance) {
-    unsigned char buf[16];
-    uint8_t show_cm = 1;
-    
-    LCDClear();
-    
-    if (distance > 100) {
-        itoa(buf, distance / 100, 10);
-        LCDWriteString(buf);
-        LCDWriteChar('m');
-        distance -= (distance / 100) * 100;
-        show_cm = 0;
-    }
-    
-    itoa(buf, distance, 10);
-    LCDWriteString(buf);
-    if (show_cm) {
-        LCDWriteString("cm");
-    }
 }
 
 void update_proximity_meter(uint16_t distance) {
@@ -111,8 +88,6 @@ void main(void) {
         distance = HCCalculateDistance();
         // Update proximity meter
         update_proximity_meter(distance);
-        // Print it on LCD display
-        display_distance(distance);
                 
         if (distance >= METER_LEVEL_1) {
             __delay_ms(DELAY_IDLE);
