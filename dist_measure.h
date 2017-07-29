@@ -19,7 +19,7 @@
 /**
  * Initialize timer1 and pins of HC-SR04
  */
-void HCInit();
+void HCInit(uint8_t _n_samples);
 
 /**
  * Calculate the time taken for signal to get to obstacle and come back
