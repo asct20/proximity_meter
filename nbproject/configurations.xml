@@ -15,7 +15,6 @@
                    displayName="Source Files"
                    projectFiles="true">
       <itemPath>main.c</itemPath>
-      <itemPath>newfile.h</itemPath>
       <itemPath>/Users/Alexandre/MPLABXProjects/Distance_measurer/LCD.c</itemPath>
       <itemPath>/Users/Alexandre/MPLABXProjects/Distance_measurer/dist_measure.c</itemPath>
     </logicalFolder>

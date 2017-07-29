@@ -3,24 +3,15 @@
 
 #include "dist_measure.h"
 
-/*Time = (TMR1H:TMR1L) / 1 000 000
-
-d = s / t
-s = 34 000 cm/s
-
-1 sec -- 34000cm
-t sec -- d
-
-d = (34000*t)/2
-t is Time above;
- */
-
 #define _XTAL_FREQ  8000000     // System clock frequency
+
+static uint8_t n_samples;
 
 /**
  * Initialize timer1 and pins of HC-SR04
+ * @param number of samples for the filter
  */
-void HCInit() {
+void HCInit(uint8_t _n_samples) {
     // Timer1 config
     T1CONbits.TMR1CS = 0;   // Clock source is internal clock (Fosc/4)
     T1CONbits.TMR1ON = 0;   // Timer off
@@ -31,6 +22,13 @@ void HCInit() {
     HCSR04_TRIG = 0;
     HCSR04_TRIG_TRIS = 0;
     HCSR04_ECHO_TRIS = 1;
+    
+    // Save n_samples
+    if (_n_samples > 5) {
+        n_samples = 5;
+    } else {
+        n_samples = _n_samples;
+    }
 }
 
 /**
@@ -66,9 +64,18 @@ uint16_t HCCalculateTime() {
  * Calculate the distance to object
  * @return distance in cm
  */
-uint8_t HCCalculateDistance() {
-    uint16_t time = HCCalculateTime();
-    uint8_t distance = time / 58.82;
+uint16_t HCCalculateDistance() {
+    uint16_t time = 0;
+    uint16_t distance = 0;
+    
+    uint8_t i = 0;
+    for (i=0 ; i<n_samples ; i++) {
+        time = HCCalculateTime();
+        distance += time / 58.77;
+        __delay_us(100);
+    }
+    
+    distance /= n_samples;
     return distance;
 }
 

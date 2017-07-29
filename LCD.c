@@ -71,9 +71,15 @@ void LCDClear()
 /**
  * Send a high pulse on EN pin
  */
-void LCDPulseEnable() {
+void LCDPulseEnableCommand() {
     LCD_EN  = 1;    
     __delay_ms(5);
+    LCD_EN  = 0;
+}
+
+void LCDPulseEnableData() {
+    LCD_EN  = 1;    
+    __delay_us(10);
     LCD_EN  = 0;
 }
 
@@ -102,10 +108,10 @@ void LCDCommand(uint8_t cmd)
 {
     LCDSetDataBus(cmd & 0xf0);
     LCD_RS  = 0;    // Cmd mode
-    LCDPulseEnable();
+    LCDPulseEnableCommand();
     
     LCDSetDataBus((cmd & 0x0f) << 4);
-    LCDPulseEnable();
+    LCDPulseEnableCommand();
 }
 
 /**
@@ -116,10 +122,10 @@ void LCDWriteChar(unsigned char data)
 {
     LCDSetDataBus(data & 0xf0);
     LCD_RS  = 1;    // data mode
-    LCDPulseEnable();
+    LCDPulseEnableData();
     
     LCDSetDataBus((data & 0x0f) << 4);
-    LCDPulseEnable();
+    LCDPulseEnableData();
 }
 
 /**

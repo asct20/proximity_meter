@@ -23,22 +23,23 @@
 
 #include <xc.h>
 #include <stdint.h>
-#include <stdlib.h>
 
-#include "LCD.h"
 #include "dist_measure.h"
 
 #define _XTAL_FREQ  8000000     // System clock frequency
 
-// Delay between 2 distances measurment (in ms)
+// Delay between 2 distances measures (in ms)
 #define DELAY_IDLE      5000    // When no object is close
 #define DELAY_ACTIVE    750     // When an object is close
 
 // Proximity levels (higher level = object is closer)
-#define METER_LEVEL_1   60
-#define METER_LEVEL_2   40
-#define METER_LEVEL_3   25
-#define METER_LEVEL_4   15
+#define METER_LEVEL_1   70
+#define METER_LEVEL_2   65
+#define METER_LEVEL_3   55
+#define METER_LEVEL_4   40
+
+// If distance is the same for this many times, go to idle mode
+#define THRESHOLD_COUNT_IDENTICAL   20
 
 void init() {
     // Oscillator config
@@ -52,32 +53,11 @@ void init() {
     PORTB = 0x00;       // PortB (0:4) is the proximity meter
     TRISB   = 0x00;
 
-    HCInit();
-    LCDInit(LCD_MODE_4_BIT);
+    // Init the distance measurer with 5 samples per measure
+    HCInit(5);
 }
 
-void display_distance(uint8_t distance) {
-    unsigned char buf[16];
-    uint8_t show_cm = 1;
-    
-    LCDClear();
-    
-    if (distance > 100) {
-        itoa(buf, distance / 100, 10);
-        LCDWriteString(buf);
-        LCDWriteChar('m');
-        distance -= (distance / 100) * 100;
-        show_cm = 0;
-    }
-    
-    itoa(buf, distance, 10);
-    LCDWriteString(buf);
-    if (show_cm) {
-        LCDWriteString("cm");
-    }
-}
-
-void update_proximity_meter(uint8_t distance) {
+void update_proximity_meter(uint16_t distance) {
     PORTBbits.RB3 = 0;
     PORTBbits.RB2 = 0;
     PORTBbits.RB1 = 0;
@@ -100,23 +80,29 @@ void update_proximity_meter(uint8_t distance) {
 void main(void) {
     init();
     
-    uint16_t current_delay = DELAY_IDLE;
-    uint8_t distance = 0;
-    
-    __delay_ms(current_delay);
+    uint8_t count_identical = 0;
+    uint16_t distance = 0;
+    uint16_t prev_distance = 0;
     
     while(1)
     {
         // Get distance
         distance = HCCalculateDistance();
-        // Update proximity meter
-        update_proximity_meter(distance);
-        // Print it on LCD display
-        display_distance(distance);
         
-        if (distance >= METER_LEVEL_1) {
+        // Update counter of identical
+        if (distance != prev_distance) {
+            count_identical = 0;
+        } else if (count_identical <= THRESHOLD_COUNT_IDENTICAL) {
+            count_identical++;
+        }
+        prev_distance = distance;
+            
+        // Update the meter
+        if (distance >= METER_LEVEL_1 || count_identical >= THRESHOLD_COUNT_IDENTICAL) {
+            update_proximity_meter(METER_LEVEL_1 + 1);  // All LEDs OFF
             __delay_ms(DELAY_IDLE);
         } else {
+            update_proximity_meter(distance);
             __delay_ms(DELAY_ACTIVE);
         }
     }
