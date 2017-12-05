@@ -4,8 +4,9 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
-      <itemPath>/Users/Alexandre/MPLABXProjects/Distance_measurer/LCD.h</itemPath>
       <itemPath>/Users/Alexandre/MPLABXProjects/Distance_measurer/dist_measure.h</itemPath>
+      <itemPath>const.h</itemPath>
+      <itemPath>UART.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -15,8 +16,8 @@
                    displayName="Source Files"
                    projectFiles="true">
       <itemPath>main.c</itemPath>
-      <itemPath>/Users/Alexandre/MPLABXProjects/Distance_measurer/LCD.c</itemPath>
       <itemPath>/Users/Alexandre/MPLABXProjects/Distance_measurer/dist_measure.c</itemPath>
+      <itemPath>UART.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"

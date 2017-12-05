@@ -15,7 +15,6 @@
 #define HCSR04_ECHO_TRIS    TRISAbits.TRISA7
 /*** STOP CHANGES ***/
 
-
 /**
  * Initialize timer1 and pins of HC-SR04
  */

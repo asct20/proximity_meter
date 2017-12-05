@@ -5,61 +5,122 @@
  * Created on October 13, 2016, 5:29 PM
  */
 
-// CONFIG1
-#pragma config FOSC = INTOSCIO        // Oscillator Selection bits (HS oscillator)
-#pragma config WDTE = OFF       // Watchdog Timer Enable bit (WDT disabled)
-#pragma config PWRTE = OFF      // Power-up Timer Enable bit (PWRT disabled)
-#pragma config MCLRE = OFF      // RA5/MCLR/VPP Pin Function Select bit (RA5/MCLR/VPP pin function is digital I/O, MCLR internally tied to VDD)
-#pragma config BOREN = ON       // Brown-out Reset Enable bit (BOR enabled)
-#pragma config LVP = OFF         // Low-Voltage Programming Enable bit (RB3/PGM pin has PGM function, Low-Voltage Programming enabled)
-#pragma config CPD = OFF        // Data EE Memory Code Protection bit (Code protection off)
-#pragma config WRT = OFF        // Flash Program Memory Write Enable bits (Write protection off)
-#pragma config CCPMX = RB0      // CCP1 Pin Selection bit (CCP1 function on RB0)
-#pragma config CP = OFF         // Flash Program Memory Code Protection bit (Code protection off)
-
-// CONFIG2
-#pragma config FCMEN = OFF      // Fail-Safe Clock Monitor Enable bit (Fail-Safe Clock Monitor disabled)
-#pragma config IESO = OFF       // Internal External Switchover bit (Internal External Switchover mode disabled)
-
 #include <xc.h>
 #include <stdint.h>
 
+#include "const.h"
 #include "dist_measure.h"
 
-#define _XTAL_FREQ  8000000     // System clock frequency
+#ifdef UART_DEBUG
+    #include "UART.h"
+#endif
 
-// Delay between 2 distances measures (in ms)
-#define DELAY_IDLE      5000    // When no object is close
-#define DELAY_ACTIVE    750     // When an object is close
+// TODO replace by simple array!
+struct proximity_levels {
+    uint8_t level_1;    // Closest
+    uint8_t level_2;
+    uint8_t level_3;
+    uint8_t level_4;     // Furthest
+};
 
-// Proximity levels (higher level = object is closer)
-#define METER_LEVEL_1   70
-#define METER_LEVEL_2   65
-#define METER_LEVEL_3   55
-#define METER_LEVEL_4   40
+// Mode used for sleep times
+enum wdt_mode {
+    mode_active,     // When an object is close
+    mode_idle        // When no object has been close for THRESHOLD_COUNT_IDENTICAL
+                     // or an object has been at the same distance for THRESHOLD_COUNT_IDENTICAL
+};
 
-// If distance is the same for this many times, go to idle mode
-#define THRESHOLD_COUNT_IDENTICAL   20
+void init();
+
+/**
+ * Update the LEDs depending on a distance
+ * @param distance
+ */
+void update_proximity_meter(uint16_t distance);
+
+/**
+ * Put the MCU into sleep mode. Will temporarily set PORTA as an output and
+ * revert it to its original state after we exit sleep mode.
+ * @param mode indicate the sleep time
+ */
+void sleep_mode(enum wdt_mode mode);
+
+void main(void) {
+    init();
+    
+    uint8_t count_identical = 0;
+    uint16_t distance = 0;
+    uint16_t prev_distance = 0;
+    enum wdt_mode wdt_mode = mode_active;
+    
+    PORTAbits.RA0 = 0;
+    TRISAbits.TRISA0 = 0;
+    
+    while(1)
+    {    
+        if (PORTAbits.RA0 == 0) {
+            PORTAbits.RA0 = 1;
+        } else {
+            PORTAbits.RA0 = 0;
+        }
+        // Get distance
+        distance = HCCalculateDistance();
+        if (distance > METER_LEVEL_1) {
+            distance = METER_LEVEL_1 + 1;
+        }
+        
+        wdt_mode = mode_active;
+        if (distance != prev_distance) {
+            update_proximity_meter(distance);
+            prev_distance = distance;
+            count_identical = 0;
+        } else {
+            if (count_identical < THRESHOLD_COUNT_IDENTICAL) {
+                count_identical++;
+            } else {
+                update_proximity_meter(METER_LEVEL_1 + 1);  // All LEDs OFF
+                wdt_mode = mode_idle;
+            }
+        }
+        
+        sleep_mode(wdt_mode);
+    }
+    return;
+}
 
 void init() {
     // Oscillator config
-    OSCCONbits.SCS = 0b00;  // Oscillator mode defined by FOSC<2:0>
-    OSCCONbits.IRCF = 0b111; // Internal RC freq to 8 MHz
-    OSCCONbits.IOFS = 1;    // Int freq is stable
+    OSCCONbits.SCS = 0b00;      // Oscillator mode defined by FOSC<2:0>
+    OSCCONbits.IRCF = 0b111;    // Internal RC freq to 8 MHz
+    OSCCONbits.IOFS = 1;        // Int freq is stable
     
-    ANSEL = 0x00;           // Set all I/O to digital I/O
+    OPTION_REGbits.PSA = 1;     // Assign Prescaler to WDT
+    OPTION_REGbits.PS = PS_ACTIVE;
+    WDTCONbits.WDTPS = PS_WDT;
     
-    // Ports config
-    PORTB = 0x00;       // PortB (0:4) is the proximity meter
-    TRISB   = 0x00;
+    ANSEL = 0x00; // Set all I/O to digital I/O
+    
+    PORTB = 0x00; // PortB (0:4) is the proximity meter
+    TRISB = 0x00;
+    
+    PORTA = 0x00;
+    TRISA = 0x00;
 
+#ifdef UART_DEBUG
+    UARTInit(9600, 1);
+#endif
+    
     // Init the distance measurer with 5 samples per measure
     HCInit(5);
 }
 
+//uint8_t get_current_level(uint16_t distance, const struct proximity_levels* levels) {
+//    
+//}
+
 void update_proximity_meter(uint16_t distance) {
     PORTBbits.RB3 = 0;
-    PORTBbits.RB2 = 0;
+    PORTBbits.RB4 = 0;
     PORTBbits.RB1 = 0;
     PORTBbits.RB0 = 0;
     
@@ -67,7 +128,7 @@ void update_proximity_meter(uint16_t distance) {
         PORTBbits.RB3 = 1;
     }
     if (distance <= METER_LEVEL_3) {
-        PORTBbits.RB2 = 1;
+        PORTBbits.RB4 = 1;
     }
     if (distance <= METER_LEVEL_2) {
         PORTBbits.RB1 = 1;
@@ -77,34 +138,25 @@ void update_proximity_meter(uint16_t distance) {
     }
 }
 
-void main(void) {
-    init();
+void sleep_mode(enum wdt_mode mode) {
+    // Set PORTA as an output to reduce current draw
+    uint8_t prev_PORTA = PORTA;
+    uint8_t prev_TRISA = TRISA;
+    PORTA = 0x00;
+    TRISA = 0x00;
     
-    uint8_t count_identical = 0;
-    uint16_t distance = 0;
-    uint16_t prev_distance = 0;
-    
-    while(1)
-    {
-        // Get distance
-        distance = HCCalculateDistance();
-        
-        // Update counter of identical
-        if (distance != prev_distance) {
-            count_identical = 0;
-        } else if (count_identical <= THRESHOLD_COUNT_IDENTICAL) {
-            count_identical++;
-        }
-        prev_distance = distance;
-            
-        // Update the meter
-        if (distance >= METER_LEVEL_1 || count_identical >= THRESHOLD_COUNT_IDENTICAL) {
-            update_proximity_meter(METER_LEVEL_1 + 1);  // All LEDs OFF
-            __delay_ms(DELAY_IDLE);
-        } else {
-            update_proximity_meter(distance);
-            __delay_ms(DELAY_ACTIVE);
-        }
+    if (mode == mode_active) {
+        OPTION_REGbits.PS = PS_ACTIVE;
+    } else {
+        OPTION_REGbits.PS = PS_IDLE;
     }
-    return;
+    
+    WDTCONbits.SWDTEN = 1; // Enable WDT
+    CLRWDT();
+    SLEEP();
+    WDTCONbits.SWDTEN = 0; // Disable WDT
+    
+    // Revert PORTA config to previous state
+//    PORTA = prev_PORTA;
+    TRISA = prev_TRISA;
 }
